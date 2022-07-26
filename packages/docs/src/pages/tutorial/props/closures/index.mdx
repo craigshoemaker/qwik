@@ -3,48 +3,61 @@ title: Passing Closures
 layout: tutorial
 ---
 
-Props must be serializable so that Qwik can resume and render each component independently from other components on the page. This possess a problem if we wish to pass a callback to a child component. Callbacks are functions and functions are not directly serializable, but they are serializable through the `$()` by converting them to QRLs first. 
+Component props are serializable so that Qwik can resume and render each component independently. There's a problem though. What if you want to include a callback to a child component? Callbacks are functions that are normally not serializable, but in Qwik they are.
+
+## Serialization
+
+Qwik serializes functions via the `$()` function by first converting them to [Qwik URLs (QRLs)](/docs/advanced/qrl). 
 
 ## QRLs
 
-Function passing across serializable boundaries must be done through QRLs. QRLs are serialized forms of a function. (See [QRL](/docs/advanced/qrl) in advanced section.)
+QRLs are serialized forms of a function that Qwik uses to pass functions across serializable boundaries. 
 
-Qwik has convenience APIs which end in `$` that are equivalent to calling `$()` directly. These two lines are equivalent:
-- inline: `<button onClick$={() => alert('click')}/>`
-- explicit: `<button onClickQrl={$(() => alert('click'))}/>`
+Qwik features a set of convenience APIs which end in `$` that are equivalent to calling `$()` directly.
 
-Most of the time we use the first form as it allows us to inline our callbacks directly into the API. But at times it is necessary to use the second form so that we can separate where the function is declared and where it is used.
+The following two lines are equivalent:
+
+- **inline**: `<button onClick$={() => alert('click')}/>`
+- **explicit**: `<button onClickQrl={$(() => alert('click'))}/>`
+
+The *inline* technique is the most common approach as callbacks are implemented directly on an element. However, sometimes you need to use the *explicit* form to separate where a function is declared from where it is used.
 
 ## Declaring callback props
 
-A component can declare a callback in its props by:
-- Property that ends in `Qrl` (as in `goodbyeQrl`)
-- The type of the property is `QRL<T>` where `T` is the lazy reference type that the QRL points to (function signature).
+A component can declare a callback in its props by having:
 
-The TypeScript automatically creates a `<name>$:T` property for every `<name>Qrl:QRL<T>` property. For example `helloQrl: QRL<(name: string) => void>` becomes `hello$: (name: string) => void` property.
+- A property that ends in `Qrl` (as in `goodbyeQrl`)
+- The type of the property as `QRL<T>` where `T` is the lazy reference type that the QRL points to (function signature).
+
+The TypeScript compiler automatically creates a `<name>$:T` property for every `<name>Qrl:QRL<T>` property. For example, `helloQrl: QRL<(name: string) => void>` becomes a `hello$: (name: string) => void` property.
 
 This allows the user of `<MyComponent>` to use either the `Qrl` or `$` form as shown here:
+
 ```jsx
 <MyComponent goodbyeQrl={goodbyeQrl} hello$={() => {...}} />
 ```
 
 ## Using callback props
 
-Notice that the `<MyComponent>` component can bind either directly to the prop QRL or wrap the QRL prop in another callback.
+Notice that `<MyComponent>` is bound either directly to the prop QRL or wraps the QRL prop in another callback.
 
-Passing the `props.goodbyeQrl` as a reference to the `<button>`
+The following example demonstrates how you can pass the `props.goodbyeQrl` as a reference to the `<button>`.
+
 ```jsx
 <button onClickQrl={props.goodbyeQrl}>hello</button>
 ```
 
-Creating a new callback for `<button>` and internally invoking the callback QRL.
+Alternatively, you can create a new callback for `<button>` which internally invokes the callback QRL.
+
 ```jsx
 <button onClick$={async () => {
     await props.helloQrl?.invoke('World');
   }}>good bye</button>
 ```
 
-This form allows the `<button>` to invoke the callback with custom parameters. Notice that the invocation requires `async` and `await` as the QRLs are lazy-loaded.
+This form allows the `<button>` to invoke the callback with custom parameters.
+
+> Notice that the invocation requires `async` and `await` as the QRLs are lazy-loaded.
 
 ## Understanding QRLs
 
